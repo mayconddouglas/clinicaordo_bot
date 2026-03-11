@@ -1,70 +1,77 @@
 # ClinicaOrdo Bot (Telegram + IA)
 
-Este repositório agora contém uma implementação funcional para conectar seu bot do Telegram a um agente de IA.
+O erro `404: NOT_FOUND` na Vercel aconteceu porque o projeto anterior só tinha um processo de polling (`python bot.py`), e na Vercel você precisa expor rotas HTTP (webhook).
 
-## O que foi corrigido
+## O que foi ajustado
 
-- Estrutura mínima de execução do bot criada.
-- Integração com Telegram via `python-telegram-bot` com polling.
-- Integração com IA via API compatível com OpenAI (`openai` SDK).
-- Tratamento de erros para evitar falhas silenciosas no chat.
-- Comandos `/start` e `/health` para diagnóstico rápido.
-- Suporte a `.env` para configuração segura de tokens/chaves.
+- Mantive o `bot.py` para execução local (polling).
+- Adicionei API HTTP para Vercel em `api/index.py`.
+- Adicionei `vercel.json` para rotear `/` e `/api/*` para a função Python.
+- Criei endpoint de webhook Telegram em `POST /api/telegram`.
+- Adicionei endpoint de health em `GET /api/health`.
+- Adicionei validação opcional com `TELEGRAM_WEBHOOK_SECRET`.
 
-## Pré-requisitos
+## Estrutura
 
-- Python 3.10+
-- Token do bot Telegram (via BotFather)
-- API key do provedor de IA (OpenAI ou compatível)
+- `bot.py` → modo local (polling)
+- `api/index.py` → modo produção Vercel (webhook)
+- `vercel.json` → roteamento da Vercel
 
-## Configuração
+## Variáveis de ambiente (Vercel)
 
-1. Crie e ative um ambiente virtual:
+Configure no painel da Vercel:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET` (recomendado)
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` (opcional)
+- `OPENAI_MODEL` (opcional, padrão `gpt-4o-mini`)
+- `SYSTEM_PROMPT` (opcional)
+- `LOG_LEVEL` (opcional)
+
+## Deploy na Vercel
+
+1. Suba este repositório para o GitHub.
+2. Importe o projeto na Vercel.
+3. Configure as variáveis de ambiente.
+4. Faça deploy.
+
+Após o deploy, teste:
+
+- `https://SEU_DOMINIO/` deve responder JSON com `ok: true`
+- `https://SEU_DOMINIO/api/health` deve responder health
+
+## Registrar webhook no Telegram
+
+Depois do deploy, registre o webhook apontando para `/api/telegram`:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<SEU_TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://SEU_DOMINIO/api/telegram",
+    "secret_token": "SEU_TELEGRAM_WEBHOOK_SECRET"
+  }'
+```
+
+Para validar:
+
+```bash
+curl "https://api.telegram.org/bot<SEU_TOKEN>/getWebhookInfo"
+```
+
+## Rodar localmente (opcional)
+
+### Modo polling
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-2. Instale dependências:
-
-```bash
 pip install -r requirements.txt
-```
-
-3. Configure variáveis de ambiente:
-
-```bash
 cp .env.example .env
-```
-
-Depois edite `.env` e preencha:
-
-- `TELEGRAM_BOT_TOKEN`
-- `OPENAI_API_KEY`
-- (Opcional) `OPENAI_BASE_URL`
-- (Opcional) `OPENAI_MODEL`
-
-## Executar
-
-```bash
 python bot.py
 ```
 
-Se estiver tudo certo, o log mostrará o username do bot conectado.
-
-## Diagnóstico de erro no Telegram
-
-Se no Telegram aparecer erro ao responder:
-
-1. Verifique se `TELEGRAM_BOT_TOKEN` está correto.
-2. Verifique se `OPENAI_API_KEY` está válida.
-3. Se usar outro provedor, defina `OPENAI_BASE_URL` corretamente.
-4. Use `/health` no chat para confirmar modelo e endpoint configurados.
-5. Veja o stack trace no terminal para identificar detalhes.
-
 ## Segurança importante
 
-⚠️ Seu token do Telegram foi compartilhado em texto aberto. O ideal é **revogar e gerar um novo token no BotFather** antes de usar em produção.
-
-Nunca comite `.env` no Git.
+⚠️ Como o token do Telegram foi exposto na conversa, **revogue esse token no BotFather e gere outro** antes de usar em produção.
